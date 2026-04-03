@@ -1,4 +1,5 @@
 import holiday from "holiday-jp"
+import { postMessage } from "./dump"
 import { hosyuIntervalTimeMinute } from "./util"
 
 const startText = `

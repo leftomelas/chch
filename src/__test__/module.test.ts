@@ -1,21 +1,17 @@
 import fs from "fs"
-import MockAdapter from "axios-mock-adapter"
-import encoding from "encoding-japanese"
 import m from ".."
-import { client } from "../dump"
 import { dateParse, parseWacchoi } from "../util"
 import { nextTime } from "../watch"
 
 const url = "https://hebi.5ch.net/test/read.cgi/news4vip/1570005180"
 
 const html = fs.readFileSync(__dirname + "/mock/thread.html")
-const mock = new MockAdapter(client)
 
-client.defaults.transformResponse = [
-  () => encoding.convert(html, { to: "UNICODE", from: "SJIS", type: "string" }),
-]
-
-mock.onGet().reply(() => [200])
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    arrayBuffer: () => Promise.resolve(new Uint8Array(html).buffer),
+  })
+) as any
 
 test("get thread", async () => {
   const thread = await m.getThread(url)

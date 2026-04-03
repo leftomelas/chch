@@ -1,4 +1,3 @@
-import axios from "axios"
 import cheerio from "cheerio"
 import encoding from "encoding-japanese"
 import _ from "lodash"
@@ -9,11 +8,15 @@ const host = "http://mi.5ch.net"
 const makeThreadUrl = (id) => `${host}/test/read.cgi/news4vip/${id}`
 const listPageUrl = `${host}/news4vip/subback.html`
 
-axios.defaults.responseType = "arraybuffer"
-axios.defaults.transformResponse = (data) =>
-  encoding.convert(data, { to: "UNICODE", from: "SJIS", type: "string" })
-
-export const client = axios.create({ withCredentials: true })
+async function fetchSjis(url: string, init?: RequestInit): Promise<string> {
+  const res = await fetch(url, init)
+  const buf = await res.arrayBuffer()
+  return encoding.convert(new Uint8Array(buf), {
+    to: "UNICODE",
+    from: "SJIS",
+    type: "string",
+  }) as string
+}
 const sizeRegex = /\d+KB/
 const part4VipRegex = /vip2ch\.com/
 const resHeaderMatchRegex = /^\d+: ([\s\S]*?) \((\d+)\)$/
@@ -40,8 +43,8 @@ const toName = (raw: string): PostName => {
 }
 
 export async function getThreads(url) {
-  const res = await client.get(url || listPageUrl)
-  const $ = cheerio.load(res.data)
+  const data = await fetchSjis(url || listPageUrl)
+  const $ = cheerio.load(data)
   const threads: ThreadMin[] = []
 
   $("#trad > a").each((i, elA) => {
@@ -67,14 +70,13 @@ export async function getThreadPart4Vip(
   url: string,
   from = 1
 ): Promise<Thread> {
-  const $ = cheerio.load((await client.get(`${url}${from}-`)).data)
+  const $ = cheerio.load(await fetchSjis(`${url}${from}-`))
 
   const title = $("h1").text().trim()
   const size = $("font > b").text()
 
   const posts: Post[] = []
 
-  // console.log(_.zip($("dl > dt"), $("dl > dd")))
   _.zip($("dl > dt"), $("dl > dd")).forEach(([dt, dd], i) => {
     if (!dd || !dt) {
       return
@@ -102,7 +104,7 @@ export async function getThreadPart4Vip(
 }
 
 export async function getThreadVip(url: string, from = 1): Promise<Thread> {
-  const $ = cheerio.load((await client.get(`${url}${from}-`)).data)
+  const $ = cheerio.load(await fetchSjis(`${url}${from}-`))
   const title = $(".title").text().trim()
   const m = sizeRegex.exec($(".metastats.meta.centered").text())
   const size = m ? m[0] : ""
@@ -203,16 +205,16 @@ export async function postMessage(url, message) {
     key: thread,
     time,
     submit: "書き込む",
-    // eslint-disable-next-line
     oekaki_thread1: "",
   }
   const form = generateForm(makeForm)
-  const post = (headers) => client.post<string>(bbsUrl, form, { headers })
-  const res = await post(headers)
+  const post = (headers) =>
+    fetchSjis(bbsUrl, { method: "POST", body: form, headers })
+  const data = await post(headers)
 
-  console.log(res.data)
+  console.log(data)
 
-  if (res.data && res.data.includes("書き込み確認")) {
+  if (data && data.includes("書き込み確認")) {
     await post(headers)
   }
 }
