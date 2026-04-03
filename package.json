@@ -29,12 +29,6 @@
     "ts-node": "9.1.1",
     "typescript": "4.9.5"
   },
-  "lint-staged": {
-    "scripts/**/*.ts": [
-      "eslint --fix",
-      "git add"
-    ]
-  },
   "keywords": [
     "5ch",
     "2ch",
@@ -51,8 +45,7 @@
     "cli": "ts-node src/cli.ts",
     "hosyu": "ts-node src/hosyu.ts",
     "build": "tsc --build tsconfig.build.json",
-    "deploy": "yarn build && yarn publish",
-    "lint": "eslint --ext .ts src",
+    "deploy": "vp run build && npm publish",
     "test:mock": "curl http://hebi.5ch.net/test/read.cgi/news4vip/1572163600 > src/__test__/mock/thread.html",
     "test": "jest"
   }
